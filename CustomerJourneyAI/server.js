@@ -3,13 +3,14 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs"); // File check karne ke liye add kiya
 
 const app = express();
 
 // ✅ Port Logic
 const PORT = process.env.PORT || 5000;
 
-// ✅ Optimized CORS (Frontend aur Backend ke beech communication gap khatam karne ke liye)
+// ✅ Optimized CORS
 app.use(cors()); 
 app.use(express.json());
 
@@ -23,7 +24,6 @@ mongoose
   .then(() => console.log("✅ MongoDB Connected: Neural Matrix Online"))
   .catch((err) => {
     console.error("❌ MongoDB Connection Error:", err);
-    // process.exit(1) ko hata diya hai taaki server crash na ho, retry kare
   });
 
 /* =========================
@@ -42,14 +42,12 @@ const CustomerSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-// Prevent model overwrite error (Production safe)
 const Customer = mongoose.models.Customer || mongoose.model("Customer", CustomerSchema);
 
 /* =========================
-    ROUTES
+    ROUTES (API)
 ========================= */
 
-// Health Check
 app.get("/api/health", (req, res) => {
   res.json({ 
     status: "Nexus AI Engine Running",
@@ -58,63 +56,36 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// ➕ Add Customer (Node Injection)
 app.post("/api/customers", async (req, res) => {
   try {
     const { name, email, visits = 0, purchases = 0 } = req.body;
-
     if (!name || !email) {
       return res.status(400).json({ message: "Name and Email are required" });
     }
-
-    // Advanced Digital Marketing Logic
     const score = Math.min(100, (Number(visits) * 6) + (Number(purchases) * 25));
-    const stage = purchases > 0 
-      ? "Purchase" 
-      : (visits >= 5 ? "Consideration" : "Awareness");
+    const stage = purchases > 0 ? "Purchase" : (visits >= 5 ? "Consideration" : "Awareness");
 
-    const customer = await Customer.create({
-      name,
-      email,
-      visits,
-      purchases,
-      engagementScore: score,
-      stage
-    });
-
-    console.log(`📈 New Node Added: ${name} (${stage})`);
+    const customer = await Customer.create({ name, email, visits, purchases, engagementScore: score, stage });
     res.status(201).json(customer);
-
   } catch (err) {
-    console.error("Post Error:", err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// 📥 Get All Customers
 app.get("/api/customers", async (req, res) => {
   try {
-    // Sorting by newest first
     const data = await Customer.find().sort({ createdAt: -1 });
     res.status(200).json(data);
   } catch (err) {
-    console.error("Fetch Error:", err);
-    res.status(500).json({ message: "Failed to fetch data from Matrix" });
+    res.status(500).json({ message: "Failed to fetch data" });
   }
 });
 
-// 📊 Analytics Data
 app.get("/api/analytics", async (req, res) => {
   try {
     const customers = await Customer.find();
     const stats = { Awareness: 0, Consideration: 0, Purchase: 0 };
-
-    customers.forEach(c => {
-      if (stats[c.stage] !== undefined) {
-        stats[c.stage]++;
-      }
-    });
-
+    customers.forEach(c => { if (stats[c.stage] !== undefined) stats[c.stage]++; });
     res.json({
       totalCustomers: customers.length,
       stageDistribution: stats,
@@ -123,25 +94,35 @@ app.get("/api/analytics", async (req, res) => {
         : 0
     });
   } catch (err) {
-    res.status(500).json({ message: "Analytics synchronization failed" });
+    res.status(500).json({ message: "Analytics failed" });
   }
 });
 
 /* =========================
-    SERVE REACT FRONTEND
+    SERVE REACT FRONTEND (FIXED FOR RENDER/VITE)
 ========================= */
-// Ye logic tabhi kaam karega jab aap 'npm run build' frontend folder mein chalayenge
-const buildPath = path.join(__dirname, "frontend", "build");
-app.use(express.static(buildPath));
+
+// Vite default mein 'dist' folder banata hai, CRA 'build' banata hai. 
+// Hum dono ko check karenge.
+const frontendPath = fs.existsSync(path.join(__dirname, "frontend", "dist")) 
+  ? path.join(__dirname, "frontend", "dist") 
+  : path.join(__dirname, "frontend", "build");
+
+app.use(express.static(frontendPath));
 
 app.get("*", (req, res) => {
-  // Check if build exists, else send a JSON message (helpful for debugging)
-  const indexFile = path.join(buildPath, "index.html");
-  res.sendFile(indexFile, (err) => {
-    if (err) {
-      res.status(200).json({ message: "API is running. Frontend build not found." });
-    }
-  });
+  const indexFile = path.join(frontendPath, "index.html");
+  
+  if (fs.existsSync(indexFile)) {
+    res.sendFile(indexFile);
+  } else {
+    // Debugging info agar build ab bhi nahi milti
+    res.status(404).json({ 
+      message: "API is running. Frontend build not found.",
+      triedPath: indexFile,
+      hint: "Check if 'npm run build' was executed in the frontend folder."
+    });
+  }
 });
 
 /* =========================
@@ -149,4 +130,5 @@ app.get("*", (req, res) => {
 ========================= */
 app.listen(PORT, () => {
   console.log(`🚀 Nexus AI Engine running on port ${PORT}`);
+  console.log(`📂 Serving Frontend from: ${frontendPath}`);
 });
