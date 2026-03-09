@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react"; // ✅ FIXED: Duplicate 'React' removed
+import React, { useEffect, useCallback, useState } from "react";
 import axios from "axios";
 import "./App.css";
 import {
@@ -12,8 +12,12 @@ import {
   Terminal, Database, ArrowRight
 } from "lucide-react";
 
-// ✅ API instance 
-const API = axios.create({ baseURL: "http://localhost:5000/api" });
+// ✅ Dynamic API Instance (Works on Local & Render)
+const API = axios.create({ 
+  baseURL: window.location.origin.includes("localhost") 
+    ? "http://localhost:5000/api" 
+    : "/api" 
+});
 
 function App() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -23,7 +27,7 @@ function App() {
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", visits: "", purchases: "" });
   const [isInjecting, setIsInjecting] = useState(false);
 
-  // ✅ 1. Wrap fetch in useCallback to prevent infinite loops
+  // ✅ Wrap fetch in useCallback
   const fetchDashboardData = useCallback(async () => {
     try {
       const [custRes, anaRes] = await Promise.all([
@@ -32,13 +36,11 @@ function App() {
       ]);
       setCustomers(Array.isArray(custRes.data) ? custRes.data : []);
       setAnalytics(anaRes.data || { totalCustomers: 0, stageDistribution: {} });
-      console.log("✅ Matrix Synced:", custRes.data.length, "nodes found.");
     } catch (error) { 
-      console.error("❌ Data Sync Error:", error); 
+      console.error("❌ Matrix Sync Error:", error); 
     }
   }, []);
 
-  // ✅ 2. Proper useEffect call
   useEffect(() => { 
     fetchDashboardData(); 
   }, [fetchDashboardData]);
@@ -59,11 +61,12 @@ function App() {
       if (res.status === 201 || res.status === 200) {
         setCustomerForm({ name: "", email: "", visits: "", purchases: "" });
         await fetchDashboardData(); 
-        alert("📈 Node Injected into Matrix!");
+        // Modern Toast/Alert replacement placeholder
+        console.log("📈 Node Injected successfully");
       }
     } catch (error) {
-      console.error("❌ Node Injection Error:", error);
-      alert("Injection Failed. Check server connection.");
+      console.error("❌ Injection Error:", error);
+      alert("Injection Failed: Make sure backend is running and URL is correct.");
     } finally {
       setIsInjecting(false);
     }
@@ -73,8 +76,9 @@ function App() {
     if (activeTab === "overview") {
       return (
         <div className="tab-fade-in">
+          {/* KPI Section */}
           <section className="stats-grid">
-            <div className="premium-card kpi-card glass-morph">
+            <div className="premium-card kpi-card glass-glow-purple">
               <div className="kpi-header">
                 <div className="kpi-icon-box purple"><Users size={20}/></div>
                 <span className="trend-label positive">+12% <ArrowUpRight size={14}/></span>
@@ -85,7 +89,7 @@ function App() {
               </div>
             </div>
 
-            <div className="premium-card kpi-card glass-morph">
+            <div className="premium-card kpi-card glass-glow-green">
               <div className="kpi-header">
                 <div className="kpi-icon-box green"><Activity size={20}/></div>
                 <span className="trend-label stable">Optimized</span>
@@ -100,7 +104,7 @@ function App() {
               </div>
             </div>
 
-            <div className="premium-card kpi-card glass-morph">
+            <div className="premium-card kpi-card glass-glow-gold">
               <div className="kpi-header">
                 <div className="kpi-icon-box gold"><TrendingUp size={20}/></div>
                 <span className="trend-label forecasted">Forecast</span>
@@ -114,7 +118,8 @@ function App() {
 
           <div className="dashboard-grid-layout">
             <div className="visual-panel">
-              <div className="premium-card chart-container shadow-glow">
+              {/* Chart Section */}
+              <div className="premium-card chart-container shadow-glow-indigo">
                 <div className="card-title-bar">
                   <div className="title-text"><Sparkles size={16} className="sparkle-anim"/> <span>Neural Matrix Velocity</span></div>
                   <div className="title-actions"><Filter size={14}/> <Download size={14}/></div>
@@ -123,25 +128,35 @@ function App() {
                   <AreaChart data={customers.length > 0 ? customers.slice(0, 15).reverse() : []}>
                     <defs>
                       <linearGradient id="colorEng" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="name" hide /> 
                     <YAxis hide domain={[0, 100]} />
-                    <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'}} />
-                    <Area type="monotone" dataKey="engagementScore" stroke="#6366f1" strokeWidth={3} fill="url(#colorEng)" />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff'}} 
+                      itemStyle={{color: '#818cf8'}}
+                    />
+                    <Area type="monotone" dataKey="engagementScore" stroke="#6366f1" strokeWidth={4} fill="url(#colorEng)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="premium-card form-container">
+              {/* Form Section */}
+              <div className="premium-card form-container glass-morph">
                 <div className="card-title-bar"><PlusCircle size={18} color="#6366f1"/> <h3>Manual Node Injector</h3></div>
                 <form className="modern-form" onSubmit={handleAddNode}>
                   <div className="input-group">
-                    <input type="text" placeholder="Subject Name" value={customerForm.name} onChange={e => setCustomerForm({...customerForm, name: e.target.value})} required />
-                    <input type="email" placeholder="Access Email" value={customerForm.email} onChange={e => setCustomerForm({...customerForm, email: e.target.value})} required />
+                    <div className="input-wrapper">
+                      <Terminal size={14} className="input-icon" />
+                      <input type="text" placeholder="Subject Name" value={customerForm.name} onChange={e => setCustomerForm({...customerForm, name: e.target.value})} required />
+                    </div>
+                    <div className="input-wrapper">
+                      <Database size={14} className="input-icon" />
+                      <input type="email" placeholder="Access Email" value={customerForm.email} onChange={e => setCustomerForm({...customerForm, email: e.target.value})} required />
+                    </div>
                   </div>
                   <div className="input-group">
                     <input type="number" placeholder="Visits" value={customerForm.visits} onChange={e => setCustomerForm({...customerForm, visits: e.target.value})} />
@@ -177,15 +192,25 @@ function App() {
                     .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
                     .map(c => (
                       <tr key={c._id || Math.random()} className="row-hover">
-                        <td><div className="node-cell"><div className="avatar-grad">{c.name?.charAt(0) || "N"}</div><div><strong>{c.name}</strong><span>{c.email}</span></div></div></td>
+                        <td>
+                          <div className="node-cell">
+                            <div className="avatar-grad">{c.name?.charAt(0) || "N"}</div>
+                            <div><strong>{c.name}</strong><span>{c.email}</span></div>
+                          </div>
+                        </td>
                         <td><div className={`status-pill-v2 ${(c.engagementScore || 0) > 50 ? 'active' : 'idle'}`}>{(c.engagementScore || 0) > 50 ? 'High Power' : 'Low Power'}</div></td>
-                        <td><div className="sync-score-wrapper"><span>{c.engagementScore || 0}%</span><div className="sync-bar-bg"><div className="sync-bar-fill" style={{width: `${c.engagementScore || 0}%`}}></div></div></div></td>
+                        <td>
+                          <div className="sync-score-wrapper">
+                            <span>{c.engagementScore || 0}%</span>
+                            <div className="sync-bar-bg"><div className="sync-bar-fill" style={{width: `${c.engagementScore || 0}%`}}></div></div>
+                          </div>
+                        </td>
                         <td><span className={`badge-pill-v2 ${c.stage?.toLowerCase() || 'unknown'}`}>{c.stage || 'Awareness'}</span></td>
                         <td><button className="icon-btn-v3"><MoreHorizontal size={18} /></button></td>
                       </tr>
                     ))
                  ) : (
-                   <tr><td colSpan="5" style={{textAlign: 'center', padding: '40px', color: '#94a3b8'}}>No data available in the Neural Matrix.</td></tr>
+                   <tr><td colSpan="5" className="empty-state">No data available in the Neural Matrix.</td></tr>
                  )}
                </tbody>
              </table>
@@ -209,14 +234,15 @@ function App() {
         </div>
       );
     }
-
-    return null;
   };
 
   return (
     <div className="app-shell-premium">
       <aside className="sidebar-premium">
-        <div className="brand-premium"><div className="logo-icon"><Zap size={20} fill="#fff"/></div> <span>NEXUS AI</span></div>
+        <div className="brand-premium">
+          <div className="logo-icon"><Zap size={20} fill="#fff"/></div> 
+          <span>NEXUS AI</span>
+        </div>
         <nav className="nav-list-premium">
           <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18}/> Overview</button>
           <button className={activeTab === "audience" ? "active" : ""} onClick={() => setActiveTab("audience")}><Users size={18}/> Node Matrix</button>
@@ -226,7 +252,10 @@ function App() {
           <button className="disabled"><Cpu size={18}/> Config</button>
         </nav>
         <div className="sidebar-footer">
-            <div className="user-pill-pro"><div className="u-avatar">K</div><div><strong>Root Admin</strong><small>Node Ludhiana</small></div></div>
+            <div className="user-pill-pro">
+              <div className="u-avatar">K</div>
+              <div><strong>Root Admin</strong><small>Node Ludhiana</small></div>
+            </div>
         </div>
       </aside>
 
