@@ -3,15 +3,18 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs"); // File check karne ke liye add kiya
+const fs = require("fs");
 
 const app = express();
-
-// ✅ Port Logic
 const PORT = process.env.PORT || 5000;
 
-// ✅ Optimized CORS
-app.use(cors()); 
+// ✅ CORS ko update kiya taaki production mein problem na aaye
+app.use(cors({
+  origin: "*", 
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json());
 
 /* =========================
@@ -21,10 +24,8 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/customerAI
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected: Neural Matrix Online"))
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-  });
+  .then(() => console.log("✅ MongoDB Connected Successfully"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 /* =========================
     MODELS
@@ -49,19 +50,14 @@ const Customer = mongoose.models.Customer || mongoose.model("Customer", Customer
 ========================= */
 
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "Nexus AI Engine Running",
-    uptime: process.uptime(),
-    timestamp: new Date()
-  });
+  res.json({ status: "Online", uptime: process.uptime() });
 });
 
 app.post("/api/customers", async (req, res) => {
   try {
     const { name, email, visits = 0, purchases = 0 } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ message: "Name and Email are required" });
-    }
+    if (!name || !email) return res.status(400).json({ message: "Missing fields" });
+
     const score = Math.min(100, (Number(visits) * 6) + (Number(purchases) * 25));
     const stage = purchases > 0 ? "Purchase" : (visits >= 5 ? "Consideration" : "Awareness");
 
@@ -77,7 +73,7 @@ app.get("/api/customers", async (req, res) => {
     const data = await Customer.find().sort({ createdAt: -1 });
     res.status(200).json(data);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch data" });
+    res.status(500).json({ message: "Fetch failed" });
   }
 });
 
@@ -99,11 +95,9 @@ app.get("/api/analytics", async (req, res) => {
 });
 
 /* =========================
-    SERVE REACT FRONTEND (FIXED FOR RENDER/VITE)
+    SERVE REACT FRONTEND
 ========================= */
-
-// Vite default mein 'dist' folder banata hai, CRA 'build' banata hai. 
-// Hum dono ko check karenge.
+// Render par path setup
 const frontendPath = fs.existsSync(path.join(__dirname, "frontend", "dist")) 
   ? path.join(__dirname, "frontend", "dist") 
   : path.join(__dirname, "frontend", "build");
@@ -112,23 +106,13 @@ app.use(express.static(frontendPath));
 
 app.get("*", (req, res) => {
   const indexFile = path.join(frontendPath, "index.html");
-  
   if (fs.existsSync(indexFile)) {
     res.sendFile(indexFile);
   } else {
-    // Debugging info agar build ab bhi nahi milti
-    res.status(404).json({ 
-      message: "API is running. Frontend build not found.",
-      triedPath: indexFile,
-      hint: "Check if 'npm run build' was executed in the frontend folder."
-    });
+    res.status(404).json({ message: "Frontend build not found at " + indexFile });
   }
 });
 
-/* =========================
-    SERVER START
-========================= */
 app.listen(PORT, () => {
-  console.log(`🚀 Nexus AI Engine running on port ${PORT}`);
-  console.log(`📂 Serving Frontend from: ${frontendPath}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
