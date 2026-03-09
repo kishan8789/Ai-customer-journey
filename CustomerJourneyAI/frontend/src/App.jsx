@@ -1,4 +1,4 @@
-import React, { useEffect, React, useCallback, useState } from "react";
+import React, { useEffect, useCallback, useState } from "react"; // ✅ FIXED: Duplicate 'React' removed
 import axios from "axios";
 import "./App.css";
 import {
@@ -17,7 +17,7 @@ const API = axios.create({ baseURL: "http://localhost:5000/api" });
 
 function App() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [customers, setCustomers] = useState([]); // Default empty array
+  const [customers, setCustomers] = useState([]); 
   const [analytics, setAnalytics] = useState({ totalCustomers: 0, stageDistribution: {} });
   const [searchTerm, setSearchTerm] = useState("");
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", visits: "", purchases: "" });
@@ -30,9 +30,8 @@ function App() {
         API.get("/customers"), 
         API.get("/analytics")
       ]);
-      // Ensure data is an array
       setCustomers(Array.isArray(custRes.data) ? custRes.data : []);
-      setAnalytics(anaRes.data || null);
+      setAnalytics(anaRes.data || { totalCustomers: 0, stageDistribution: {} });
       console.log("✅ Matrix Synced:", custRes.data.length, "nodes found.");
     } catch (error) { 
       console.error("❌ Data Sync Error:", error); 
@@ -59,7 +58,6 @@ function App() {
       
       if (res.status === 201 || res.status === 200) {
         setCustomerForm({ name: "", email: "", visits: "", purchases: "" });
-        // ✅ 3. Refresh data immediately after injection
         await fetchDashboardData(); 
         alert("📈 Node Injected into Matrix!");
       }
@@ -195,13 +193,28 @@ function App() {
         </div>
       );
     }
-    // ... campaigns tab remains same
+
+    if (activeTab === "campaigns") {
+      return (
+        <div className="tab-fade-in premium-card hero-section-v3">
+          <div className="hero-content-pro">
+             <div className="hero-visual-v3">
+                <Rocket size={60} color="#6366f1" className="rocket-float-pro"/>
+                <div className="glow-orbit"></div>
+             </div>
+             <h2>AI Campaign Orchestrator</h2>
+             <p>Autonomous neural deployments active across all sectors.</p>
+             <button className="primary-btn-premium lg-btn"><Zap size={18}/> Execute Protocol</button>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
   return (
     <div className="app-shell-premium">
-      {/* Sidebar and Header logic stays exactly as you provided */}
       <aside className="sidebar-premium">
         <div className="brand-premium"><div className="logo-icon"><Zap size={20} fill="#fff"/></div> <span>NEXUS AI</span></div>
         <nav className="nav-list-premium">
